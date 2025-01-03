@@ -1,5 +1,6 @@
+# https://discord.com/developers/applications/1324484768695451679/bot
+
 # Importações do discord
-# import discord
 from discord import Client, Intents
 from discord.member import Member
 from discord.message import Message
