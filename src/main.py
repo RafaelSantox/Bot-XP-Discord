@@ -1,14 +1,11 @@
 # Importações do discord
-import discord
-from discord import Client
+# import discord
+from discord import Client, Intents
 from discord.member import Member
 from discord.message import Message
-from discord.guild import Guild
-from discord.ext import commands
 
 # Importações gerais
 import os
-import asyncio
 from dotenv import load_dotenv
 
 # Carregando as variáveis de ambiente
@@ -75,7 +72,7 @@ class ExperienceManager:
 
 
 
-class MyClient(Client):
+class Minerva(Client):
     """
     Classe responsável pela conexão com a API de aplicações do Discord
     """
@@ -121,10 +118,10 @@ class MyClient(Client):
         
 
 # Configurações internas de Intents do app Bot
-intents = discord.Intents.default()
+intents = Intents.default()
 intents.members = True # Acesso aos membros
 intents.message_content = True # Acesso as mensagens
 
 # Instanciando o bot
-client = MyClient(intents=intents)
+client = Minerva(intents=intents)
 client.run(TOKEN) # Executando o loop de eventos do bot
