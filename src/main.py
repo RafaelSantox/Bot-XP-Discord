@@ -1,43 +1,48 @@
 # https://discord.com/developers/applications/1324484768695451679/bot
 
-# Importações do discord
+import discord
 from discord import Client, Intents
 from discord.member import Member
 from discord.message import Message
-
-# Importações gerais
-import os
 from dotenv import load_dotenv
+import os
 
-# Carregando as variáveis de ambiente
 load_dotenv()
-
-# Armazenando token do bot
 TOKEN = os.getenv("DISCORD_TOKEN")
+
+# Dicionário para armazenar o XP dos usuários
+user_xp_data = {}
+
+def get_user_xp(user_id: int) -> int:
+    # Retorna o XP atual do usuário, ou 0 se ele não existir no dicionário
+    return user_xp_data.get(user_id, 0)
+
+def add_xp(user_id: int, xp: int):
+    # Adiciona XP ao usuário
+    if user_id in user_xp_data:
+        user_xp_data[user_id] += xp
+    else:
+        user_xp_data[user_id] = xp
+
 
 # Classe de gerenciamento dos comandos de XP
 class ExperienceManager:
-    """
-    Objeto que irá gerenciar o xp dos usuários
-    """
     def __init__(self, client: Client):
-        self.client: Client = client
+        self.client = client
 
     async def xp_command(self, message: Message):
-        """
-        Conjunto de comandos relacionados ao XP dos usuários
-        """
-
         # Verificar se a mensagem enviada não foi enviada pelo próprio bot
         if message.author == self.client.user:
             return
-        
+
+        user_xp = get_user_xp(message.author.id)
+
         # Verifica se a mensagem é apenas "/xp"
         # Caso sim:
         # - Envia a mensagem com o XP do usuário autor no chat
         if message.content.lower() == "/xp":
-            await message.channel.send(f"XP do usuário {message.author.mention}: Mais de 8 mil")
-            return # Precisa do Return para não ler os outros comandos
+            await message.channel.send(f"XP do usuário {message.author.mention}: {user_xp}")
+            return
         
         # Verifica se a mensagem começa com "/xp"
         # Caso sim:
@@ -50,12 +55,12 @@ class ExperienceManager:
         if message.content.lower().startswith("/xp"):
             if message.mentions:
                 mentioned_user = message.mentions[0]
-                await message.channel.send(f"XP do usuário {mentioned_user.mention}: Mais de 8 mil")
-                return # Precisa do return para não ler os outros comandos
+                mentioned_xp = get_user_xp(mentioned_user.id)
+                await message.channel.send(f"XP de {mentioned_user.mention}: {mentioned_xp}")
             else:
                 await message.channel.send(f"Usuário não catalogado!")
-                return # Precisa do return para não ler os outros comandos
-    
+            return
+
     async def ranking_command(self, message: Message):
         """
         Comando responsável pelo ranking de XP dos usuários
@@ -69,60 +74,72 @@ class ExperienceManager:
         # Caso sim:
         # - Envia a mensagem com o ranking de XP dos usuário catalogados com XP
         if message.content.lower() == "/ranking":
-            await message.channel.send(f"Usuário {message.author.mention} deseja o **Ranking**")
+            ranking = sorted(user_xp_data.items(), key=lambda x: x[1], reverse=True)
+            ranking_message = "**Ranking de XP**:\n"
+            for i, (user_id, xp) in enumerate(ranking[:10], start=1):
+                user = await self.client.fetch_user(user_id)
+                ranking_message += f"{i}. {user.name}: {xp} XP\n"
+            await message.channel.send(f"Meu caro {message.author.mention}! Ainda não consigo listar o **Ranking**")
 
+    async def ranking_hierarchy(self, message: Message):
+        # Certifique-se de que está acessando os atributos corretamente.
+        if isinstance(message, discord.Message):
+            if message.author.bot:
+                return
+        else:
+            print("Mensagem não é do tipo esperado:", type(message))
+        
+        
+        user_xp = get_user_xp(message.author.id)
+
+        xp_roles = [
+            ("👑 Lorde", 6809600),
+            ("⚜️ Nobre", 1702400),
+            ("🛡️ Cavalaria", 425600),
+            ("⚔️ Oficiais", 106400),
+            ("💰 Soldado de aluguel", 25600),
+            ("✝️ Monge", 6400),
+            ("🛠️ Armeiro", 1600),
+            ("🧑‍🎓 Escudeiro", 400),
+        ]
+        
+        for role_name, required_xp in xp_roles:
+            if user_xp >= required_xp:
+                # Busca o cargo pelo nome
+                role = discord.utils.get(message.guild.roles, name=role_name)
+                
+                # Verifica se o cargo existe e se o usuário já não possui
+                if role and role not in message.author.roles:
+                    await message.author.add_roles(role)
+                    await message.channel.send(
+                        f"Parabéns, {message.author.mention}! Você ganhou o cargo de {role.name}!"
+                    )
+
+        
 
 
 class Minerva(Client):
-    """
-    Classe responsável pela conexão com a API de aplicações do Discord
-    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Inicializa o a classe de gerenciamento de XP dos usuários
         self.experience = ExperienceManager(self)
 
     async def on_ready(self):
-        """
-        Evento: Quando o bot for ativado
-        """
         print(f'Logged in as {self.user} (ID: {self.user.id})')
-        print('------')
 
-    async def on_member_join(self, member:Member):
-        """
-        Evento: Quando um novo usuário entra no servidor
-        """
-
-        # Armazena as informações do servidor
+    async def on_member_join(self, member: Member):
         guild = member.guild
-
-        # Verifica se no servidor há um canal de mensagens do sistema
-        # Caso sim:
-        # - Envia uma mensagem de welcome no canal de mensagens do sistema
-        if guild.system_channel is not None:
+        if guild.system_channel:
             to_send = f'Welcome {member.mention} to {guild.name}!'
             await guild.system_channel.send(to_send)
-    
-    
+
     async def on_message(self, message: Message):
-        """
-        Evento: Quando uma nova mensagem é enviada
-        """
-
-        # Envia o conteúdo da mensagem para o Gerenciador de XP -> Comandos de XP
         await self.experience.xp_command(message)
-        
-        # Envia o conteúdo da mensagem para o Gerenciador de XP -> Comandos de Ranking
         await self.experience.ranking_command(message)
-        
+        await self.experience.ranking_hierarchy(message)
 
-# Configurações internas de Intents do app Bot
 intents = Intents.default()
-intents.members = True # Acesso aos membros
-intents.message_content = True # Acesso as mensagens
+intents.members = True
+intents.message_content = True
 
-# Instanciando o bot
 client = Minerva(intents=intents)
-client.run(TOKEN) # Executando o loop de eventos do bot
+client.run(TOKEN)
