@@ -10,9 +10,20 @@ import os
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
+# Dicionário para armazenar o XP dos usuários
+user_xp_data = {}
+
 def get_user_xp(user_id: int) -> int:
-    # Simulação de XP
-    return 450
+    # Retorna o XP atual do usuário, ou 0 se ele não existir no dicionário
+    return user_xp_data.get(user_id, 0)
+
+def add_xp(user_id: int, xp: int):
+    # Adiciona XP ao usuário
+    if user_id in user_xp_data:
+        user_xp_data[user_id] += xp
+    else:
+        user_xp_data[user_id] = xp
+
 
 # Classe de gerenciamento dos comandos de XP
 class ExperienceManager:
@@ -45,7 +56,7 @@ class ExperienceManager:
             if message.mentions:
                 mentioned_user = message.mentions[0]
                 mentioned_xp = get_user_xp(mentioned_user.id)
-                await message.channel.send(f"XP do usuário {mentioned_user.mention}: {mentioned_xp}")
+                await message.channel.send(f"XP de {mentioned_user.mention}: {mentioned_xp}")
             else:
                 await message.channel.send(f"Usuário não catalogado!")
             return
@@ -63,11 +74,22 @@ class ExperienceManager:
         # Caso sim:
         # - Envia a mensagem com o ranking de XP dos usuário catalogados com XP
         if message.content.lower() == "/ranking":
-            await message.channel.send(f"Usuário {message.author.mention} deseja o **Ranking**")
+            ranking = sorted(user_xp_data.items(), key=lambda x: x[1], reverse=True)
+            ranking_message = "**Ranking de XP**:\n"
+            for i, (user_id, xp) in enumerate(ranking[:10], start=1):
+                user = await self.client.fetch_user(user_id)
+                ranking_message += f"{i}. {user.name}: {xp} XP\n"
+            await message.channel.send(f"Meu caro {message.author.mention}! Ainda não consigo listar o **Ranking**")
 
     async def ranking_hierarchy(self, message: Message):
-        if message.author.bot:
-            return
+        # Certifique-se de que está acessando os atributos corretamente.
+        if isinstance(message, discord.Message):
+            if message.author.bot:
+                return
+        else:
+            print("Mensagem não é do tipo esperado:", type(message))
+        
+        
         user_xp = get_user_xp(message.author.id)
 
         xp_roles = [
@@ -81,10 +103,10 @@ class ExperienceManager:
             ("🧑‍🎓 Escudeiro", 400),
         ]
         
-        for xp_criteria in xp_roles:
-            if user_xp >= xp_criteria["xp"]:
+        for role_name, required_xp in xp_roles:
+            if user_xp >= required_xp:
                 # Busca o cargo pelo nome
-                role = discord.utils.get(message.guild.roles, name=xp_criteria["role_name"])
+                role = discord.utils.get(message.guild.roles, name=role_name)
                 
                 # Verifica se o cargo existe e se o usuário já não possui
                 if role and role not in message.author.roles:
@@ -93,6 +115,7 @@ class ExperienceManager:
                         f"Parabéns, {message.author.mention}! Você ganhou o cargo de {role.name}!"
                     )
 
+        
 
 
 class Minerva(Client):
