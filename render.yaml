@@ -7,3 +7,4 @@ services:
     startCommand: python bot.py
     envVars:
       - key: DISCORD_TOKEN
+        value: YOUR_DISCORD_BOT_TOKEN
