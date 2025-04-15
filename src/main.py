@@ -9,6 +9,17 @@ import os
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+botName = 'Athena'
+linksChatDiscord = {
+    'comunicados': '',
+    'comunicadosFrelancers': '',
+    'boas-vindas': '',
+    'playground': {
+        'chatGeral': '',
+        'desafios': '',
+        'source': '',
+    }
+}
 
 # Dicionário para armazenar o XP dos usuários
 user_xp_data = {}
@@ -40,8 +51,11 @@ class ExperienceManager:
         # Verifica se a mensagem é apenas "/xp"
         # Caso sim:
         # - Envia a mensagem com o XP do usuário autor no chat
-        if message.content.lower() == "/xp":
+        if message.content.lower() == "ty: xp":
             await message.channel.send(f"XP do usuário {message.author.mention}: {user_xp}")
+            return
+        if message.content.lower() == "ty: guardião":
+            await message.channel.send(f"Olá, {message.author.mention}! Eu sou {botName}, a coruja sábia que se tornou a mascote orgulhosa desta incrível comunidade.\n\nEu sou a representação viva do compromisso da TYTO.code com a excelência em administração, suporte aos desenvolvedores e organização de projetos. Assim como minha homônima mitológica, estou aqui para guiar e inspirar.\n\nSe você tiver ideias para aprimorar a minha atuação ou sugestões para a TYTO.code, ficarei encantada em ouvir. Contribuições que promovam eficiência, inovação e uma atmosfera de desenvolvimento positiva são sempre apreciadas.")
             return
         
         # Verifica se a mensagem começa com "/xp"
@@ -52,7 +66,7 @@ class ExperienceManager:
         #       - Envia a mensagem com XP do usuário mencionado
         #   Caso não:
         #       - Envia uma mensagem avisando que o usuário mencionado não existe
-        if message.content.lower().startswith("/xp"):
+        if message.content.lower().startswith("ty: xp"):
             if message.mentions:
                 mentioned_user = message.mentions[0]
                 mentioned_xp = get_user_xp(mentioned_user.id)
@@ -60,6 +74,33 @@ class ExperienceManager:
             else:
                 await message.channel.send(f"Usuário não catalogado!")
             return
+        if message.content.startswith("ty: addxp"):
+            await add_xp_command(message)
+        
+
+    async def add_xp_command(message):
+        if message.author.bot:
+            return
+
+        # Verifica se o autor tem permissão para adicionar XP
+        if not message.author.guild_permissions.administrator:
+            await message.channel.send("Você não tem permissão para usar este comando.")
+            return
+
+        # Verifica se o comando foi usado corretamente
+        try:
+            # Extraindo os parâmetros: menção ao usuário e quantidade de XP
+            _, mentioned_user, xp_to_add = message.content.split()
+            mentioned_user_id = int(mentioned_user[3:-1])  # Extrai o ID da menção, removendo <@ e >
+            xp_to_add = int(xp_to_add)
+
+            # Adiciona XP ao usuário no banco de dados
+            add_xp(mentioned_user_id, message.guild.id, xp_to_add)
+            await message.channel.send(f"{xp_to_add} XP foram adicionados para o usuário {mentioned_user}!")
+        except (IndexError, ValueError):
+            await message.channel.send("Use o comando assim: `/addxp @usuario [quantidade]`.")
+
+
 
     async def ranking_command(self, message: Message):
         """
@@ -73,7 +114,7 @@ class ExperienceManager:
         # Verifica se a mensagem é apenas "/ranking"
         # Caso sim:
         # - Envia a mensagem com o ranking de XP dos usuário catalogados com XP
-        if message.content.lower() == "/ranking":
+        if message.content.lower() == "ty: ranking":
             ranking = sorted(user_xp_data.items(), key=lambda x: x[1], reverse=True)
             ranking_message = "**Ranking de XP**:\n"
             for i, (user_id, xp) in enumerate(ranking[:10], start=1):
