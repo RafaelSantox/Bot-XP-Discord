@@ -32,3 +32,9 @@ python-dotenv==1.0.1
     # via bot-xp-discord (pyproject.toml)
 yarl==1.18.3
     # via aiohttp
+transformers==4.40.1
+    # via bot-xp-discord (pyproject.toml)
+huggingface-hub==0.23.0
+    # via
+    #   bot-xp-discord (pyproject.toml)
+    #   transformers
