@@ -1,0 +1,10 @@
+{
+    "soma": {
+        "descrição": "Crie uma função que some dois números",
+        "xp": 10
+    },
+    "multiplicação e divisão recursiva": {
+        "descrição": "Criar duas funções recursivas que multipliquem e dividam dois números sem usar operadores * ou /",
+        "xp": 100
+    }
+}
